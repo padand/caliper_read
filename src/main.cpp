@@ -1,5 +1,15 @@
 #include <Arduino.h>
 
+/*
+Data format:
+24 bits
+                    sign (1 = negative)
+__value (base 2)___ |
+|                  ||
+000000000000000000001001
+*/
+
+
 //========================================================= GLOBALS
 #define PIN_CLOCK  4
 #define PIN_DATA   5
