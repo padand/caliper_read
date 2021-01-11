@@ -16,15 +16,23 @@ void readCaliper();
 #define IS_CLK_LOW   (!IS_CLK_HIGH)
 // the minimum number of microseconds that signal the start sequence
 #define CLK_START_SEQUENCE 500
-// waits until the start of the data sequence; returns the first data bit
-bool grabStart();
+// waits until the start of the data sequence
+void grabStart();
 
 // condition for data high
 #define IS_DATA_HIGH (digitalRead(PIN_DATA)==HIGH)
 // condition for data low
 #define IS_DATA_LOW (!IS_DATA_HIGH)
+// returns the value of the current data bit
+#define GET_BIT_VALUE IS_DATA_LOW
+
 // the number of the data bits in each sequence
-#define DATA_BITS 24
+#define DATA_BITS  24
+// the number of the value bits
+#define VALUE_BITS 20
+// the index of the sign bit
+#define SIGN_BIT   21
+
 // returns the next data bit
 bool grabPulse();
 // the value that identifies a high pulse
@@ -50,7 +58,7 @@ void loop() {
 
 //========================================================= IMPLEMENTATIONS
 
-bool grabStart() {
+void grabStart() {
   unsigned long m;
   bool start = false;
   while(!start) {
@@ -59,25 +67,24 @@ bool grabStart() {
     while(IS_CLK_LOW) {}
     if(micros() - m > CLK_START_SEQUENCE) start = true;
   }
-  return IS_DATA_HIGH;
 }
 
 bool grabPulse() {
   while(IS_CLK_HIGH) {}
   while(IS_CLK_LOW) {}
-  return IS_DATA_HIGH;
+  return GET_BIT_VALUE;
 }
 
 void readCaliper() {
   bool data[DATA_BITS];
   unsigned int dataIdx = 0;
-  // scan for the start sequence position and grab the first bit
-  data[0] = grabStart();
+  // scan for the start sequence
+  grabStart();
   // grab each data bit
   do {
-    dataIdx ++;
     data[dataIdx] = grabPulse();
-  } while(dataIdx < DATA_BITS-1);
+    dataIdx ++;
+  } while(dataIdx < DATA_BITS);
   // print data bits
   for (dataIdx=0; dataIdx<DATA_BITS; dataIdx++) {
     Serial.print(data[dataIdx]);
