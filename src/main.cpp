@@ -2,10 +2,14 @@
 
 /*
 Data format:
-24 bits
-                    sign (1 = negative)
-__value (base 2)___ |
-|                  ||
+20 bits value
+1  bits sign
+3  bits error check
+
+                     __sign (1 = negative)
+                    |
+ __value (base 2)__ | ____error check
+|                  ||| |
 000000000000000000001001
 */
 
@@ -36,12 +40,24 @@ void grabStart();
 // returns the value of the current data bit
 #define GET_BIT_VALUE IS_DATA_LOW
 
-// the number of the data bits in each sequence
+// the number of data bits in each sequence
 #define DATA_BITS  24
-// the number of the value bits
+// the number of value bits
 #define VALUE_BITS 20
-// the index of the sign bit
-#define SIGN_BIT   21
+// the number of sign bits, should always be 1
+#define SIGN_BITS 1
+// the number of verification bits
+#define VERIFY_BITS 3
+
+// sanity check
+#if VALUE_BITS + ERROR_MASK_BITS + SIGN_BITS + VERIFY_BITS != DATA_BITS
+  #error "Invalid data format"
+#endif
+
+// decimal result of bitwise ERROR_MASK_BITS || VERIFY_BITS
+// useful for checking if there was an error in acquiring data,
+// like skipping bits for example
+#define VERIFY_SUCCESS 4
 
 // returns the next data bit
 bool grabPulse();
