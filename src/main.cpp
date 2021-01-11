@@ -14,7 +14,7 @@ Data format:
 */
 
 
-//========================================================= GLOBALS
+//========================================================= CONFIG
 #define PIN_CLOCK  4
 #define PIN_DATA   5
 
@@ -24,14 +24,14 @@ Data format:
 // 10  = 1 decimal
 #define DECIMALS_DIVIDE   100
 
-// if enabled it prints the data bits sequence
+// uncomment to print the binary data sequence
 // #define DEBUG_DATA_BITS
 
 //========================================================= CALIPER READOUT DEFINITIONS
-// stores the value read from the caliper
-float caliperValue;
+
 // reads the value from the caliper
-void readCaliper();
+// return true if the value is ok
+bool readCaliper(float *value);
 
 // condition for clock high
 #define IS_CLK_HIGH  (digitalRead(PIN_CLOCK)==HIGH)
@@ -72,11 +72,9 @@ void grabStart();
 
 // returns the next data bit
 bool grabPulse();
-// the value that identifies a high pulse
-#define PULSE_HIGH true
-// the value that identifies a low pulse
-#define PULSE_LOW false
 
+// prints the binary data sequence
+void printDataBits(bool *data);
 
 //========================================================= SETUP
 void setup() {
@@ -86,8 +84,13 @@ void setup() {
 }
 
 //========================================================= MAIN LOOP
+float v;
 void loop() {
-  readCaliper();
+  if(readCaliper(&v)) {
+    Serial.println(v);
+  } else {
+    Serial.println("readout error");
+  }
 }
 
 //========================================================= IMPLEMENTATIONS
@@ -109,15 +112,7 @@ bool grabPulse() {
   return GET_BIT_VALUE;
 }
 
-void printDataBits(bool *data) {\
-  Serial.println("Data bits:");
-  for (unsigned int i=0; i<DATA_BITS; i++) {
-    Serial.print(data[i]);
-  }
-  Serial.println();
-}
-
-void readCaliper() {
+bool readCaliper(float *value) {
   bool data[DATA_BITS];
   unsigned int dataIdx = 0;
   // scan for the start sequence
@@ -143,10 +138,18 @@ void readCaliper() {
     for(unsigned int i=0; i<VALUE_BITS; i++) {
       valueTemp |= data[i]<<i;
     }
-    float value = float(valueTemp) / float(DECIMALS_DIVIDE);
+    *value = float(valueTemp) / float(DECIMALS_DIVIDE);
     if (data[SIGN_INDEX-1]) {
-      value *= -1.0f;
+      *value *= -1.0f;
     }
-    Serial.println(value);
+    return true;
   }
+  return false;
+}
+
+void printDataBits(bool *data) {
+  for (unsigned int i=0; i<DATA_BITS; i++) {
+    Serial.print(data[i]);
+  }
+  Serial.println();
 }
