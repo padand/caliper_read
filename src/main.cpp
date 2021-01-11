@@ -18,6 +18,15 @@ Data format:
 #define PIN_CLOCK  4
 #define PIN_DATA   5
 
+// the number used to divide the int value to get
+// a fixed decimal float value
+// 100 = 2 decimals
+// 10  = 1 decimal
+#define DECIMALS_DIVIDE   100
+
+// if enabled it prints the data bits sequence
+// #define DEBUG_DATA_BITS
+
 //========================================================= CALIPER READOUT DEFINITIONS
 // stores the value read from the caliper
 float caliperValue;
@@ -54,6 +63,8 @@ void grabStart();
   #error "Invalid data format"
 #endif
 
+#define SIGN_INDEX (VALUE_BITS + SIGN_BITS)
+
 // decimal result of bitwise ERROR_MASK_BITS || VERIFY_BITS
 // useful for checking if there was an error in acquiring data,
 // like skipping bits for example
@@ -76,10 +87,7 @@ void setup() {
 
 //========================================================= MAIN LOOP
 void loop() {
-  Serial.println("Start read");
   readCaliper();
-  Serial.println("End read");
-  delay(1000);
 }
 
 //========================================================= IMPLEMENTATIONS
@@ -101,6 +109,14 @@ bool grabPulse() {
   return GET_BIT_VALUE;
 }
 
+void printDataBits(bool *data) {\
+  Serial.println("Data bits:");
+  for (unsigned int i=0; i<DATA_BITS; i++) {
+    Serial.print(data[i]);
+  }
+  Serial.println();
+}
+
 void readCaliper() {
   bool data[DATA_BITS];
   unsigned int dataIdx = 0;
@@ -112,8 +128,25 @@ void readCaliper() {
     dataIdx ++;
   } while(dataIdx < DATA_BITS);
   // print data bits
-  for (dataIdx=0; dataIdx<DATA_BITS; dataIdx++) {
-    Serial.print(data[dataIdx]);
+  #ifdef DEBUG_DATA_BITS
+    printDataBits(data);
+  #endif
+  // verify data ok
+  dataIdx = VALUE_BITS + SIGN_BITS;
+  unsigned int dataVerify = 0;
+  for(unsigned int i=0; i<VERIFY_BITS; i++) {
+    dataVerify |= data[dataIdx+i]<<i;
   }
-  Serial.println();
+  if(dataVerify == VERIFY_SUCCESS) {
+    // success; convert value to float and print
+    unsigned long valueTemp = 0;
+    for(unsigned int i=0; i<VALUE_BITS; i++) {
+      valueTemp |= data[i]<<i;
+    }
+    float value = float(valueTemp) / float(DECIMALS_DIVIDE);
+    if (data[SIGN_INDEX-1]) {
+      value *= -1.0f;
+    }
+    Serial.println(value);
+  }
 }
